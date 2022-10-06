@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -aeu -o pipefail
+
+show_help(){
+  echo "Usage tfw <subcommand> args
+
+  The tfw is a wrapper for a terraform command.
+  It must help you to deal with multiple workspaces.
+
+  Main commands:
+    install         It will create a sym link in the disired preffix (default preffix: /usr/local/bin) 
+                      * This command requires sudo permissions.
+
+    init            It will wrap the terraform init command.
+                      It will create the logs and plan folders if they don't exist. 
+                      It will create a shared_variables file if it don't exist. This file will be used with all tfw commands.
+                      It will add a .tfw entry inside the .gitignore file if it exists
+
+    plan            It will wrap the terraform plan command with the command below.
+                      terraform plan -var-file \"./variables/\$(terraform workspace show).tfvars\" -out \"./.tfw/plans/\$(terraform workspace show).tfplan\"
+
+    apply           It will wrap the terraform apply command with the command below.
+                      terraform apply \"./.tfw/plans/\$(terraform workspace show).tfplan\"
+
+    workspace new   It will wrap the terraform workspace new command and will create the variables file for the created workspace
+  "
+}
+
+install(){
+  local TFW_SCRIPT_PATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+  local PREFIX="${1:-/usr/local}"
+  ln -sf "${TFW_SCRIPT_PATH}/tfw" "${PREFIX}/bin/tfw"
+}
+
+init(){
+  local tfw_paths=("./.tfw" "./.tfw/logs" "./.tfw/plans")
+  for tfw_path in "${tfw_paths[@]}"; do
+    [ ! -d "$tfw_path" ] && mkdir -p $tfw_path
+  done
+  [ -f .gitignore ] && grep -E ".tfw" .gitignore > /dev/null  || echo $'\n.tfw' >> .gitignore
+  [ ! -f ".tfw/shared_variables.sh" ] && {
+    echo "export CURRENT_WORKSPACE=\$(terraform workspace show)" >> .tfw/shared_variables.sh
+    echo "export TF_IN_AUTOMATION=true" >> .tfw/shared_variables.sh
+    echo "export TF_INPUT=0" >> .tfw/shared_variables.sh
+    echo "export TF_LOG=trace" >> .tfw/shared_variables.sh
+    echo "export TF_LOG_PATH=\"./.tfw/logs/\$(date +%Y-%m-%dT%T).log\"" >> .tfw/shared_variables.sh
+  }
+}
+
+plan(){
+  terraform plan -var-file "./variables/${CURRENT_WORKSPACE}.tfvars" -out "./.tfw/plans/${CURRENT_WORKSPACE}.tfplan"
+}
+
+apply(){
+  terraform apply "./.tfw/plans/${CURRENT_WORKSPACE}.tfplan"
+}
+
+workspace(){
+  local OPERATION=$2
+  case $OPERATION in 
+    new)
+      local VARIABLES_DIR="variables"
+      local WORKSPACE_NAME=${3:? "Workspace name must be set"}
+      local WORKSPACE_VARIABLES_FILE="${VARIABLES_DIR}/${WORKSPACE_NAME}.tfvars"
+      [ ! -d "variables" ] && mkdir -p variables
+      [ ! -f "${WORKSPACE_VARIABLES_FILE}" ] && touch "${WORKSPACE_VARIABLES_FILE}"
+      ;;
+  esac
+}
+
+
+[ -f ".tfw/shared_variables.sh" ] && source .tfw/shared_variables.sh
+
+OPERATION=$1
+case $OPERATION in 
+  install)
+    shift
+    install "$@"
+    exit
+    ;;
+
+  init)
+    init
+    ;;
+
+  plan)
+    shift
+    plan "$@"
+    exit
+    ;;
+
+  apply)
+    shift
+    apply "$@"
+    exit
+    ;;
+
+  workspace)
+    workspace "$@"
+    ;;
+
+  help|-h|--help)
+    show_help
+    exit
+    ;;
+esac
+terraform "$@"

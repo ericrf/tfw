@@ -1,0 +1,6 @@
+.terraform
+.tfw
+variables
+terraform.tfstate.d
+*.tf
+tmp.*
