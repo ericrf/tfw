@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -aeu -o pipefail
+#set -aeu -o pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -75,6 +75,3 @@ EOF
   assertTrue "./.tfw/plans/${WORKSPACE_NAME}.tfplan file should be created" "[ -f ./.tfw/plans/${WORKSPACE_NAME}.tfplan ]"
   assertEquals "output" "$(../tfw show -json | jq -r '.values.outputs.my_output.value')"
 }
-
-# shellcheck source=/dev/null
-. shunit2
