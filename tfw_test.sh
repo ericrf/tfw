@@ -22,7 +22,15 @@ testInit(){
   assertTrue '.tfw/logs folder should be created' "[ -d .tfw/logs ]"
   assertTrue '.tfw/plans folder should be created' "[ -d .tfw/plans ]"
   assertTrue '.tfw/shared_variables.sh file should be created' "[ -f .tfw/shared_variables.sh ]"
-  assertTrue '.gitignore file should be  and should not be empty' "[ -s .gitignore ]"
+  assertEquals 'shared_variables content was wrong!' \
+"export TF_IN_AUTOMATION=true
+export TF_INPUT=0
+export TF_LOG=trace
+export TF_LOG_PATH=\"./.tfw/logs/\$(date +%Y-%m-%dT%T).log\""\
+  "$(cat .tfw/shared_variables.sh)"
+
+
+  assertTrue '.gitignore file should be not be empty' "[ -s .gitignore ]"
   assertTrue '.gitignore should have .tfw entry' "grep -q .tfw .gitignore"
   
 }
