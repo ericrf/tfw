@@ -39,7 +39,6 @@ init(){
   done
   [ -f .gitignore ] && grep -E ".tfw" .gitignore > /dev/null  || echo $'\n.tfw' >> .gitignore
   [ ! -f ".tfw/shared_variables.sh" ] && {
-    echo "" >> .tfw/shared_variables.sh
     echo "export TF_IN_AUTOMATION=true" >> .tfw/shared_variables.sh
     echo "export TF_INPUT=0" >> .tfw/shared_variables.sh
     echo "export TF_LOG=trace" >> .tfw/shared_variables.sh
